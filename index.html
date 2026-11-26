@@ -205,9 +205,9 @@ section.sec{padding:clamp(46px,7vw,82px) 0;position:relative}
   background:rgba(255,250,252,.92);backdrop-filter:blur(12px);
   border:2px solid #2A0A14;box-shadow:0 6px 0 #2A0A14, 0 14px 30px rgba(110,17,40,.22);
   max-width:calc(100vw - 20px);overflow-x:auto;scrollbar-width:none;
-  opacity:0;pointer-events:none;transition:opacity .5s ease, transform .5s cubic-bezier(.2,.8,.2,1);
+  opacity:0;visibility:hidden;pointer-events:none;transition:opacity .5s ease, transform .5s cubic-bezier(.2,.8,.2,1);
 }
-.pill-nav.unlocked{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+.pill-nav.unlocked{opacity:1;visibility:visible;pointer-events:auto;transform:translate(-50%,0)}
 .pill-nav::-webkit-scrollbar{display:none}
 .pill-nav a{
   white-space:nowrap;padding:7px 13px;border-radius:999px;
@@ -1092,6 +1092,7 @@ $('#mHours').textContent = Number(CONFIG.MILESTONE.hours).toLocaleString('en-US'
 const music = { index: 0, playing: false, ytFrame: null, audio: new Audio() };
 music.audio.preload = 'auto';
 music.audio.volume = 0.85;
+music.audio.addEventListener('ended', () => selectSong(music.index + 1, true));
 
 function renderTrackList() {
   $('#trackList').innerHTML = CONFIG.SONGS.map((s, i) => `
@@ -1154,7 +1155,7 @@ function selectSong(i, autoplay = true) {
       music.audio.src = s.mp3Url;
       music.audio.load();
     }
-    music.audio.loop = true;
+    music.audio.loop = false;
     $('#ytWrap').innerHTML = `<div style="display:grid;place-items:center;height:100%;padding:10px;text-align:center;color:#FFF5F8;font-family:var(--cute);font-size:13px;background:linear-gradient(135deg,#9E1F3F,#4B1525)">🎵 ${esc(s.title)}<br><small style="opacity:.8;font-weight:400">${esc(s.artist)}</small></div>`;
     music.ytFrame = null;
     if (autoplay) playAudioSafely();
@@ -1344,7 +1345,6 @@ document.addEventListener('keydown', e => {
 });
 function revealUnlockedSections() {
   $('#unlockedContent').classList.add('unlocked');
-  $('#pillNav').classList.add('unlocked');
   const collageBgVideo = $('#collageBgVideo');
   if (!collageBgVideo.hidden) {
     collageBgVideo.play().catch(error => {
@@ -1355,7 +1355,6 @@ function revealUnlockedSections() {
 function unlockSite() {
   try { sessionStorage.setItem(LOCK_KEY, '1'); } catch (e) {}
   $('#lockScreen').classList.add('leaving');
-  document.body.classList.remove('no-scroll');
   revealUnlockedSections();
   setTimeout(() => { $('#lockScreen').style.display = 'none'; }, 550);
 }
@@ -1364,7 +1363,6 @@ $('#proceedBtn').addEventListener('click', unlockSite);
 try {
   if (sessionStorage.getItem(LOCK_KEY) === '1') {
     $('#lockScreen').style.display = 'none';
-    document.body.classList.remove('no-scroll');
     revealUnlockedSections();
   }
 } catch (e) {}
@@ -1373,9 +1371,15 @@ try {
 const envBtn = $('#envelopeBtn');
 const envPaper = $('#envPaper');
 let envHideTimer = null;
+document.addEventListener('click', e => {
+  if (!document.body.classList.contains('no-scroll')) return;
+  if (e.target.closest('a[href^="#sec"]')) e.preventDefault();
+});
 function openEnvelope() {
   if (envBtn.classList.contains('open')) return;
   clearTimeout(envHideTimer);
+  document.body.classList.remove('no-scroll');
+  $('#pillNav').classList.add('unlocked');
   envBtn.classList.add('open');
   $('#miniPlayer').classList.add('visible');
   if (!music.playing) startMusic();
